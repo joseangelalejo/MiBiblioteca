@@ -15,9 +15,9 @@ class Libro(models.Model):
         INTERMEDIA = 2, "Intermedia"
         AVANZADA = 3, "Avanzada"
     # DECLARACIÓN DE ATRIBUTOS
-    titulo = models.CharField(max_length=150)
+    titulo = models.CharField(max_length=200)
     autor = models.CharField(max_length=100)
-    isbn = models.CharField(max_length=13)
+    isbn = models.CharField(max_length=13, unique=True)
     sinopsis = models.TextField(blank=True)
     fecha_publicacion = models.DateField()
     anio_publicacion = models.IntegerField("año de publicación")
@@ -45,13 +45,14 @@ class Libro(models.Model):
         verbose_name_plural = "Libros"
     
 class Editorial(models.Model):
-    nombre = models.CharField(max_length=150)
+    nombre = models.CharField(max_length=150, unique=True)
     email = models.EmailField(blank=True)
     sitio_web = models.URLField(
         max_length=500,
         null=True,
         blank=True,
     )   # Defino como null=True y blank=True para permitir que el campo esté vacío
+    activa = models.BooleanField(default=True)
     pais = models.CharField(max_length=50, default="España")
     
     def __str__(self):
