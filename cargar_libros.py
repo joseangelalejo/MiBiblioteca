@@ -1,7 +1,14 @@
 from datetime import date
 from decimal import Decimal
 
+from django.core.management.color import no_style
+from django.db import connection
+
 from catalogo.models import Libro
+
+# Si es True, vacía la tabla de libros y reinicia sus IDs antes de cargar los
+# datos. Solo afecta a los libros. Déjalo en False para conservar los actuales.
+REINICIAR = False
 
 # Datos de ejemplo. Los ISBN, fechas completas, páginas y precios son ficticios.
 libros = [
@@ -62,10 +69,78 @@ libros = [
         "precio": Decimal("17.50"),
         "dificultad": Libro.Dificultad.INTERMEDIA,
     },
+    {
+        "titulo": "Python para principiantes",
+        "autor": "Laura Gómez",
+        "genero": Libro.Genero.ENSAYO,
+        "anio_publicacion": 2023,
+        "disponible": True,
+        "isbn": "9780000000066",
+        "fecha_publicacion": date(2023, 3, 10),
+        "paginas": 320,
+        "precio": Decimal("24.95"),
+        "dificultad": Libro.Dificultad.BASICA,
+    },
+    {
+        "titulo": "Django en la práctica",
+        "autor": "Pedro Ortiz",
+        "genero": Libro.Genero.ENSAYO,
+        "anio_publicacion": 2024,
+        "disponible": True,
+        "isbn": "9780000000073",
+        "fecha_publicacion": date(2024, 6, 5),
+        "paginas": 410,
+        "precio": Decimal("29.90"),
+        "dificultad": Libro.Dificultad.INTERMEDIA,
+    },
+    {
+        "titulo": "Programación avanzada con PYTHON",
+        "autor": "Sofía Marín",
+        "genero": Libro.Genero.ENSAYO,
+        "anio_publicacion": 2022,
+        "disponible": False,
+        "isbn": "9780000000080",
+        "fecha_publicacion": date(2022, 11, 18),
+        "paginas": 520,
+        "precio": Decimal("39.90"),
+        "dificultad": Libro.Dificultad.AVANZADA,
+    },
+    {
+        "titulo": "Aplicaciones web con Django y Python",
+        "autor": "Raúl Cabrera",
+        "genero": Libro.Genero.ENSAYO,
+        "anio_publicacion": 2025,
+        "disponible": True,
+        "isbn": "9780000000097",
+        "fecha_publicacion": date(2025, 1, 20),
+        "paginas": 380,
+        "precio": Decimal("30.00"),
+        "dificultad": Libro.Dificultad.INTERMEDIA,
+    },
+    {
+        "titulo": "Historia del software libre",
+        "autor": "Javier Prieto",
+        "genero": Libro.Genero.ENSAYO,
+        "anio_publicacion": 2020,
+        "disponible": True,
+        "isbn": "9780000000103",
+        "fecha_publicacion": date(2020, 9, 14),
+        "paginas": 210,
+        "precio": Decimal("10.00"),
+        "dificultad": Libro.Dificultad.BASICA,
+    },
 ]
 
+if REINICIAR:
+    # Vacía solo la tabla de libros y reinicia su contador de IDs.
+    sql = connection.ops.sql_flush(
+        no_style(), [Libro._meta.db_table], reset_sequences=True
+    )
+    connection.ops.execute_sql_flush(sql)
+    print("Tabla de libros reiniciada")
+
 for datos in libros:
-    titulo = datos.pop("titulo")
-    Libro.objects.get_or_create(titulo=titulo, defaults=datos)
+    isbn = datos.pop("isbn")
+    Libro.objects.get_or_create(isbn=isbn, defaults=datos)
 
 print("Libros en la base de datos:", Libro.objects.count())
