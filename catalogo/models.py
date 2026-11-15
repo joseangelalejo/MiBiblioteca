@@ -52,6 +52,7 @@ class Editorial(models.Model):
         null=True,
         blank=True,
     )   # Defino como null=True y blank=True para permitir que el campo esté vacío
+    pais = models.CharField(max_length=50, default="España")
     
     def __str__(self):
         return self.nombre
