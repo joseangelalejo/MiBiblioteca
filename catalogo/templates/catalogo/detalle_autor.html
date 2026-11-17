@@ -1,0 +1,24 @@
+{% extends 'catalogo/base.html' %}
+
+{% block page_title %}{{ autor }} | Autor{% endblock %}
+
+{% block contenido %}
+<h1>{{ autor }}</h1>
+<dl class="detalle">
+    <dt>Nacionalidad</dt>
+    <dd>{{ autor.nacionalidad }}</dd>
+    <dt>Fecha de nacimiento</dt>
+    <dd>{{ autor.fecha_nacimiento|default:"Desconocida" }}</dd>
+    <dt>Biografía</dt>
+    <dd>{{ autor.biografia|default:"Sin biografía" }}</dd>
+</dl>
+<h2>Libros de {{ autor }}</h2>
+<ul>
+    {% for libro in autor.libros.all %}
+        <li><a href="{% url 'detalle_libro' libro.pk %}">{{ libro.titulo }}</a></li>
+    {% empty %}
+        <li>No hay libros de este autor.</li>
+    {% endfor %}
+</ul>
+<a class="button" href="{% url 'lista_libros' %}">Volver al catálogo</a>
+{% endblock %}

@@ -35,6 +35,8 @@ class Libro(models.Model):
         choices=Dificultad.choices,
         default=Dificultad.BASICA,
     )
+    editorial = models.ForeignKey('Editorial', on_delete=models.PROTECT, related_name='libros', null=True, blank=True)
+    autores = models.ManyToManyField('Autor', related_name='libros', blank=True)
     def __str__(self):
         return self.titulo
     

@@ -27,6 +27,22 @@
     <dd>{{ libro.paginas }}</dd>
     <dt>Precio</dt>
     <dd>{{ libro.precio }} €</dd>
+    <dt>Editorial</dt>
+    <dd>
+        {% if libro.editorial %}
+            <a href="{% url 'editorial' libro.editorial.pk %}">{{ libro.editorial.nombre }}</a>
+        {% else %}
+            Sin editorial
+        {% endif %}
+    </dd>
+    <dt>Autores</dt>
+    <dd>
+        {% for autor in libro.autores.all %}
+            <a href="{% url 'detalle_autor' autor.pk %}">{{ autor.nombre }}</a>{% if not forloop.last %}, {% endif %}
+        {% empty %}
+            Sin autores
+        {% endfor %}
+    </dd>
     <dt>Estado</dt>
     <dd>{% if libro.disponible %}Disponible{% else %}No disponible{% endif %}</dd>
 </dl>

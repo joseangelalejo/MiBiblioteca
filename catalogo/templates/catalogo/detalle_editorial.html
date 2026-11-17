@@ -1,0 +1,28 @@
+{% extends 'catalogo/base.html' %}
+
+{% block page_title %}{{ editorial.nombre }} | Editorial{% endblock %}
+
+{% block contenido %}
+<h1>{{ editorial.nombre }}</h1>
+<dl class="detalle">
+    <dt>ID</dt>
+    <dd>{{ editorial.id }}</dd>
+    <dt>Email</dt>
+    <dd>{{ editorial.email|default:"Sin email" }}</dd>
+    <dt>Sitio web</dt>
+    <dd>{% if editorial.sitio_web %}<a href="{{ editorial.sitio_web }}">{{ editorial.sitio_web }}</a>{% else %}Sin sitio web{% endif %}</dd>
+    <dt>País</dt>
+    <dd>{{ editorial.pais }}</dd>
+    <dt>Estado</dt>
+    <dd>{% if editorial.activa %}Activa{% else %}Inactiva{% endif %}</dd>
+</dl>
+<h2>Libros publicados</h2>
+<ul>
+    {% for libro in editorial.libros.all %}
+        <li><a href="{% url 'detalle_libro' libro.pk %}">{{ libro.titulo }}</a></li>
+    {% empty %}
+        <li>No hay libros publicados por esta editorial.</li>
+    {% endfor %}
+</ul>
+<a class="button" href="{% url 'lista_libros' %}">Volver al catálogo</a>
+{% endblock %}

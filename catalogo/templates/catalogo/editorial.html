@@ -1,0 +1,16 @@
+{% extends 'catalogo/base.html' %}
+
+{% block page_title %}{{ editorial.nombre }} | Editorial{% endblock %}
+
+{% block contenido %}
+<h1>Editorial: {{ editorial.nombre }}</h1>
+<h2>Libros publicados por {{ editorial.nombre }}</h2>
+<ul>
+    {% for libro in editorial.libros.all %}
+        <li><a href="{% url 'detalle_libro' libro.pk %}">{{ libro.titulo }}</a></li>
+    {% empty %}
+        <li>No hay libros publicados por esta editorial.</li>
+    {% endfor %}
+</ul>
+<a class="button" href="{% url 'lista_libros' %}">Volver al catálogo</a>
+{% endblock %}
