@@ -12,5 +12,6 @@
         <li>No hay libros publicados por esta editorial.</li>
     {% endfor %}
 </ul>
+<p>Detalle de la editorial <a href="{% url 'detalle_editorial' editorial.pk %}">{{ editorial.nombre }}</a></p>
 <a class="button" href="{% url 'lista_libros' %}">Volver al catálogo</a>
 {% endblock %}

@@ -16,6 +16,11 @@ def editorial(request, pk):
     
     return render(request, "catalogo/editorial.html", {"editorial": editorial})
 
+def detalle_editorial(request, pk):
+    editorial = get_object_or_404(Editorial, pk=pk)
+    
+    return render(request, "catalogo/detalle_editorial.html", {"editorial": editorial})
+
 def detalle_autor(request, pk):
     autor = get_object_or_404(Autor, pk=pk)
     
@@ -24,5 +29,5 @@ def detalle_autor(request, pk):
 def lista_editoriales(request, pk):
     editorial = get_object_or_404(Editorial, pk=pk)
     libros = Libro.objects.filter(editorial=editorial)
-    
-    return render(request, "catalogo/lista_editoriales.html", {"editorial": editorial, "libros": libros})
+    cantidad_libros = libros.count()
+    return render(request, "catalogo/lista_editoriales.html", {"editorial": editorial, "libros": libros, "cantidad_libros": cantidad_libros})
