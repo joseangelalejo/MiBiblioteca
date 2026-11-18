@@ -90,6 +90,28 @@ class PerfilUsuario(models.Model):
         verbose_name = "Perfil de usuario"
         verbose_name_plural = "Perfiles de usuario"
 
+class Participacion(models.Model):
+    class Funcion(models.TextChoices):
+        PRINCIPAL = "PRI", "Autor principal"
+        COAUTOR = "COA", "Coautor"
+        COLABORADOR = "COL", "Colaborador"
+    libro = models.ForeignKey(Libro, on_delete=models.CASCADE, related_name="participaciones")
+    autor = models.ForeignKey(Autor, on_delete=models.CASCADE, related_name="participaciones")
+    funcion = models.CharField(
+        max_length=3, choices=Funcion.choices, default=Funcion.COAUTOR
+    )
+    fecha_incorporacion = models.DateField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libro", "autor"], name="participacion_unica_libro_autor"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.autor} participa en {self.libro}"
+
 
 # Choices no siempre sustituye una relación ForeignKey porque no 
 # permite almacenar información adicional sobre la relación.
