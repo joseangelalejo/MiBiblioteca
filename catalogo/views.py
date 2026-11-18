@@ -4,7 +4,7 @@ from .models import Libro, Autor, Editorial
 # Create your views here.
 
 def lista_libros(request):
-    libros = Libro.objects.order_by("titulo")
+    libros = Libro.objects.order_by("titulo").prefetch_related("autores")
     return render(request, "catalogo/lista_libros.html", {"libros": libros})
 
 def detalle_libro(request, pk):

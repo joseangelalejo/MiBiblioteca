@@ -16,7 +16,6 @@ class Libro(models.Model):
         AVANZADA = 3, "Avanzada"
     # DECLARACIÓN DE ATRIBUTOS
     titulo = models.CharField(max_length=200)
-    autor = models.CharField(max_length=100)
     isbn = models.CharField(max_length=13, unique=True)
     sinopsis = models.TextField(blank=True)
     fecha_publicacion = models.DateField()
