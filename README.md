@@ -1,6 +1,6 @@
 # MiBiblioteca
 
-Práctica de Django de la unidad *Persistencia y ORM* (UT4): proyecto `biblioteca` con la aplicación `catalogo`, modelos `Libro`, `Editorial` y `Autor`, migraciones, operaciones CRUD y consultas con el ORM. Base de datos SQLite.
+Práctica de Django de la unidad *Persistencia y ORM* (UT4): proyecto `biblioteca` con la aplicación `catalogo`, modelos `Libro`, `Editorial`, `Autor` y `PerfilUsuario` relacionados entre sí, migraciones, operaciones CRUD y consultas con el ORM. Base de datos SQLite.
 
 ## Requisitos
 
@@ -36,10 +36,16 @@ python manage.py showmigrations catalogo
 
 ## Cargar datos de ejemplo
 
-`cargar_libros.py` carga diez libros de ejemplo. Con `REINICIAR = True` (variable al principio del archivo) vacía antes la tabla de libros y reinicia sus IDs; con `False` conserva los existentes.
+`cargar_libros.py` carga diez libros de ejemplo. Con `REINICIAR = True` (variable al principio del archivo) vacía antes la tabla de libros (y sus relaciones con autores) y reinicia sus IDs; con `False` conserva los existentes.
 
 ```bash
 python manage.py shell < cargar_libros.py
+```
+
+Para la Actividad 6, `actividad6_datos.py` añade dos editoriales, asigna editorial a cinco libros, añade un segundo autor a uno de ellos y crea un usuario de prueba con su perfil (con contraseña inutilizable). Se ejecuta después de `cargar_libros.py`:
+
+```bash
+python manage.py shell < actividad6_datos.py
 ```
 
 > **Windows:** el operador `<` no está disponible en PowerShell, así que ejecuta estos comandos desde CMD o Git Bash. Antes, define `PYTHONUTF8=1` para que las tildes se guarden bien en la base de datos (`set PYTHONUTF8=1` en CMD, `export PYTHONUTF8=1` en Git Bash). En PowerShell: `$env:PYTHONUTF8 = "1"` y después `cmd /c "python manage.py shell < cargar_libros.py"`.
@@ -50,11 +56,15 @@ python manage.py shell < cargar_libros.py
 python manage.py runserver
 ```
 
-| Ruta           | Contenido               |
-| -------------- | ----------------------- |
-| `/`            | Listado de libros       |
-| `/libro/<id>/` | Detalle de un libro     |
-| `/admin/`      | Panel de administración |
+| Ruta                       | Contenido                                           |
+| -------------------------- | --------------------------------------------------- |
+| `/`                        | Listado de libros                                   |
+| `/libro/<id>/`             | Detalle de un libro, con su editorial y sus autores |
+| `/editorial/<id>/`         | Editorial y los libros que publica                  |
+| `/editorial/<id>/libros/`  | Libros de una editorial y su cantidad               |
+| `/editorial/<id>/detalle/` | Datos de una editorial                              |
+| `/autor/<id>/`             | Datos de un autor y sus libros                      |
+| `/admin/`                  | Panel de administración                             |
 
 Para entrar en el panel hay que crear antes un superusuario:
 
@@ -66,7 +76,7 @@ Desde el panel se pueden gestionar `Libro`, `Autor` y `Editorial`.
 
 ## Actividades de la UT4
 
-Cada actividad tiene su etiqueta (`ut4-act1` a `ut4-act5`) para localizar el estado exacto del proyecto en ese momento.
+Cada actividad tiene su etiqueta (`ut4-act1` a `ut4-act6`) para localizar el estado exacto del proyecto en ese momento.
 
 | Actividad                          | Contenido                                      | Archivos                                   |
 | ---------------------------------- | ---------------------------------------------- | ------------------------------------------ |
@@ -75,17 +85,22 @@ Cada actividad tiene su etiqueta (`ut4-act1` a `ut4-act5`) para localizar el est
 | 3. Gestión de migraciones          | Migraciones 0001 a 0005                        | `catalogo/migrations/`, `Actividad3.md`    |
 | 4. CRUD del catálogo               | Crear, leer, actualizar y borrar con el ORM    | `actividad4_crud.py`, `Actividad4.md`      |
 | 5. Boletín de consultas ORM        | 15 consultas con filtros, orden y agregaciones | `actividad5_consultas.py`, `Actividad5.md` |
+| 6. Modelos relacionados            | Relaciones 1:N, N:M y 1:1 y `on_delete`        | `actividad6_*.py`, `Actividad6.md`         |
 
-Los scripts de las actividades 4 y 5 se ejecutan igual que la carga de datos (en Windows, con `PYTHONUTF8=1`, como se explica arriba):
+Los scripts de las actividades 4, 5 y 6 se ejecutan igual que la carga de datos (en Windows, con `PYTHONUTF8=1`, como se explica arriba):
 
 ```bash
 python manage.py shell < actividad4_crud.py
 python manage.py shell < actividad5_consultas.py
+python manage.py shell < actividad6_datos.py
+python manage.py shell < actividad6_consultas.py
 ```
 
 ### Consultas ORM y resultados
 
 Las 15 consultas de la Actividad 5, con sus resultados y las respuestas a las preguntas, están en [`Actividad5.md`](Actividad5.md). El script [`actividad5_consultas.py`](actividad5_consultas.py) las ejecuta e imprime los resultados. Para obtener los mismos datos, hay que partir de los diez libros de `cargar_libros.py` con `REINICIAR = True`.
+
+Las consultas de la Actividad 6 (relaciones, `select_related()`, `prefetch_related()`, `Prefetch` y `on_delete`), con el diagrama de relaciones y las respuestas a las preguntas, están en [`Actividad6.md`](Actividad6.md). Los scripts [`actividad6_datos.py`](actividad6_datos.py) y [`actividad6_consultas.py`](actividad6_consultas.py) crean los datos y ejecutan las consultas. Para obtener los mismos resultados, hay que partir de una base de datos nueva (`python manage.py migrate`) con los datos de `cargar_libros.py` y `actividad6_datos.py`. El script [`actividad6_on_delete.py`](actividad6_on_delete.py) se ejecuta en una copia del proyecto para comparar `PROTECT` y `SET_NULL`, como se explica en `Actividad6.md`.
 
 ## Migraciones
 
@@ -96,6 +111,10 @@ Las 15 consultas de la Actividad 5, con sus resultados y las respuestas a las pr
 | `0003_libro_recomendado`  | Campo `Libro.recomendado`                                                           |
 | `0004_editorial_pais`     | Campo `Editorial.pais`                                                              |
 | `0005_ajustes_actividad2` | `isbn` y `Editorial.nombre` únicos, `Editorial.activa` y `titulo` de 200 caracteres |
+| `0006_libro_editorial`    | Relación 1:N `Libro.editorial` (`PROTECT`, admite nulos)                            |
+| `0007_libro_autores`      | Relación N:M `Libro.autores`                                                        |
+| `0008_quitar_libro_autor` | Elimina `Libro.autor`, sustituido por la relación `autores`                         |
+| `0009_perfilusuario`      | Modelo `PerfilUsuario`, relación 1:1 con el usuario                                 |
 
 ## Configuración de la base de datos
 
@@ -145,8 +164,11 @@ MiBiblioteca/
 ├── catalogo/              # aplicación: modelos, vistas, plantillas, migraciones
 ├── actividad4_crud.py
 ├── actividad5_consultas.py
+├── actividad6_datos.py
+├── actividad6_consultas.py
+├── actividad6_on_delete.py
 ├── cargar_libros.py
-├── Actividad2.md ... Actividad5.md
+├── Actividad2.md ... Actividad6.md
 ├── manage.py
 └── requirements.txt
 ```
