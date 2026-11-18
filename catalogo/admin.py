@@ -6,9 +6,9 @@ from .models import Autor, Editorial, Libro
 
 @admin.register(Libro)
 class LibroAdmin(admin.ModelAdmin):
-    list_display = ("titulo", "autor", "genero", "anio_publicacion", "disponible")
+    list_display = ("titulo", "genero", "anio_publicacion", "disponible")
     list_filter = ("genero", "disponible")
-    search_fields = ("titulo", "autor", "isbn")
+    search_fields = ("titulo", "autores__nombre", "autores__apellidos", "isbn")
 
 admin.site.register(Autor)
 admin.site.register(Editorial)

@@ -4,17 +4,19 @@ from decimal import Decimal
 from django.core.management.color import no_style
 from django.db import connection
 
-from catalogo.models import Libro
+from catalogo.models import Autor, Libro
 
-# Si es True, vacía la tabla de libros y reinicia sus IDs antes de cargar los
-# datos. Solo afecta a los libros. Déjalo en False para conservar los actuales.
+# Si es True, vacía la tabla de libros (y sus relaciones con autores) y reinicia
+# sus IDs antes de cargar los datos. No borra los autores ni las editoriales.
+# Déjalo en False para conservar los libros actuales.
 REINICIAR = False
 
 # Datos de ejemplo. Los ISBN, fechas completas, páginas y precios son ficticios.
+# Cada autor se indica como (nombre, apellidos, nacionalidad).
 libros = [
     {
         "titulo": "Don Quijote de la Mancha",
-        "autor": "Miguel de Cervantes",
+        "autores": [("Miguel", "de Cervantes", "Española")],
         "genero": Libro.Genero.NOVELA,
         "anio_publicacion": 1605,
         "disponible": True,
@@ -25,7 +27,7 @@ libros = [
     },
     {
         "titulo": "Veinte poemas de amor y una canción desesperada",
-        "autor": "Pablo Neruda",
+        "autores": [("Pablo", "Neruda", "Chilena")],
         "genero": Libro.Genero.POESIA,
         "anio_publicacion": 1924,
         "disponible": True,
@@ -36,7 +38,7 @@ libros = [
     },
     {
         "titulo": "Bodas de sangre",
-        "autor": "Federico García Lorca",
+        "autores": [("Federico", "García Lorca", "Española")],
         "genero": Libro.Genero.TEATRO,
         "anio_publicacion": 1933,
         "disponible": False,
@@ -47,7 +49,7 @@ libros = [
     },
     {
         "titulo": "Meditaciones del Quijote",
-        "autor": "José Ortega y Gasset",
+        "autores": [("José", "Ortega y Gasset", "Española")],
         "genero": Libro.Genero.ENSAYO,
         "anio_publicacion": 1914,
         "disponible": True,
@@ -59,7 +61,7 @@ libros = [
     },
     {
         "titulo": "Persépolis",
-        "autor": "Marjane Satrapi",
+        "autores": [("Marjane", "Satrapi", "Iraní-francesa")],
         "genero": Libro.Genero.COMIC,
         "anio_publicacion": 2000,
         "disponible": True,
@@ -71,7 +73,7 @@ libros = [
     },
     {
         "titulo": "Python para principiantes",
-        "autor": "Laura Gómez",
+        "autores": [("Laura", "Gómez", "Desconocida")],
         "genero": Libro.Genero.ENSAYO,
         "anio_publicacion": 2023,
         "disponible": True,
@@ -83,7 +85,7 @@ libros = [
     },
     {
         "titulo": "Django en la práctica",
-        "autor": "Pedro Ortiz",
+        "autores": [("Pedro", "Ortiz", "Desconocida")],
         "genero": Libro.Genero.ENSAYO,
         "anio_publicacion": 2024,
         "disponible": True,
@@ -95,7 +97,7 @@ libros = [
     },
     {
         "titulo": "Programación avanzada con PYTHON",
-        "autor": "Sofía Marín",
+        "autores": [("Sofía", "Marín", "Desconocida")],
         "genero": Libro.Genero.ENSAYO,
         "anio_publicacion": 2022,
         "disponible": False,
@@ -107,7 +109,7 @@ libros = [
     },
     {
         "titulo": "Aplicaciones web con Django y Python",
-        "autor": "Raúl Cabrera",
+        "autores": [("Raúl", "Cabrera", "Desconocida")],
         "genero": Libro.Genero.ENSAYO,
         "anio_publicacion": 2025,
         "disponible": True,
@@ -119,7 +121,7 @@ libros = [
     },
     {
         "titulo": "Historia del software libre",
-        "autor": "Javier Prieto",
+        "autores": [("Javier", "Prieto", "Desconocida")],
         "genero": Libro.Genero.ENSAYO,
         "anio_publicacion": 2020,
         "disponible": True,
@@ -132,15 +134,24 @@ libros = [
 ]
 
 if REINICIAR:
-    # Vacía solo la tabla de libros y reinicia su contador de IDs.
-    sql = connection.ops.sql_flush(
-        no_style(), [Libro._meta.db_table], reset_sequences=True
-    )
+    # Vacía solo la tabla de libros y la de sus relaciones con autores, y reinicia
+    # sus contadores de IDs.
+    tablas = [Libro._meta.db_table, Libro.autores.through._meta.db_table]
+    sql = connection.ops.sql_flush(no_style(), tablas, reset_sequences=True)
     connection.ops.execute_sql_flush(sql)
     print("Tabla de libros reiniciada")
 
 for datos in libros:
     isbn = datos.pop("isbn")
-    Libro.objects.get_or_create(isbn=isbn, defaults=datos)
+    autores = datos.pop("autores")
+    libro, _ = Libro.objects.get_or_create(isbn=isbn, defaults=datos)
+    for nombre, apellidos, nacionalidad in autores:
+        autor, _ = Autor.objects.get_or_create(
+            nombre=nombre,
+            apellidos=apellidos,
+            defaults={"nacionalidad": nacionalidad},
+        )
+        libro.autores.add(autor)
 
 print("Libros en la base de datos:", Libro.objects.count())
+print("Autores en la base de datos:", Autor.objects.count())

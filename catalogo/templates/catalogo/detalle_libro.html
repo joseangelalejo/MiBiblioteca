@@ -9,8 +9,6 @@
     <dd>{{ libro.id }}</dd>
     <dt>Título</dt>
     <dd>{{ libro.titulo }}</dd>
-    <dt>Autor</dt>
-    <dd>{{ libro.autor }}</dd>
     <dt>ISBN</dt>
     <dd>{{ libro.isbn }}</dd>
     <dt>Sinopsis</dt>
@@ -38,7 +36,7 @@
     <dt>Autores</dt>
     <dd>
         {% for autor in libro.autores.all %}
-            <a href="{% url 'detalle_autor' autor.pk %}">{{ autor.nombre }}</a>{% if not forloop.last %}, {% endif %}
+            <a href="{% url 'detalle_autor' autor.pk %}">{{ autor }}</a>{% if not forloop.last %}, {% endif %}
         {% empty %}
             Sin autores
         {% endfor %}

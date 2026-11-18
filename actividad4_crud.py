@@ -6,7 +6,7 @@ Ejecución: python manage.py shell < actividad4_crud.py
 from datetime import date
 from decimal import Decimal
 
-from catalogo.models import Libro
+from catalogo.models import Autor, Libro
 
 # ISBN de los cinco libros de esta actividad (ficticios y distintos entre sí)
 ISBN_1 = "9780000001001"
@@ -27,7 +27,7 @@ print("\n=== 1. Crear cinco libros ===")
 datos = [
     {
         "titulo": "Python para todos",
-        "autor": "Ana Torres",
+        "autores": [("Ana", "Torres")],
         "isbn": ISBN_1,
         "fecha_publicacion": date(2021, 3, 15),
         "paginas": 320,
@@ -35,7 +35,7 @@ datos = [
     },
     {
         "titulo": "Django desde cero",
-        "autor": "Luis Herrera",
+        "autores": [("Luis", "Herrera")],
         "isbn": ISBN_2,
         "fecha_publicacion": date(2022, 9, 1),
         "paginas": 410,
@@ -43,7 +43,7 @@ datos = [
     },
     {
         "titulo": "Bases de datos relacionales",
-        "autor": "Marta Ruiz",
+        "autores": [("Marta", "Ruiz")],
         "isbn": ISBN_3,
         "fecha_publicacion": date(2019, 5, 20),
         "paginas": 280,
@@ -51,7 +51,7 @@ datos = [
     },
     {
         "titulo": "Historia de la informática",
-        "autor": "Carlos Vega",
+        "autores": [("Carlos", "Vega")],
         "isbn": ISBN_4,
         "fecha_publicacion": date(2015, 11, 10),
         "paginas": 240,
@@ -59,7 +59,7 @@ datos = [
     },
     {
         "titulo": "Cuentos de programadores",
-        "autor": "Elena Navarro",
+        "autores": [("Elena", "Navarro")],
         "isbn": ISBN_5,
         "fecha_publicacion": date(2023, 2, 28),
         "paginas": 150,
@@ -67,7 +67,15 @@ datos = [
     },
 ]
 for d in datos:
+    autores = d.pop("autores")
     libro = Libro.objects.create(anio_publicacion=d["fecha_publicacion"].year, **d)
+    for nombre, apellidos in autores:
+        autor, _ = Autor.objects.get_or_create(
+            nombre=nombre,
+            apellidos=apellidos,
+            defaults={"nacionalidad": "Desconocida"},
+        )
+        libro.autores.add(autor)
     print(f"Creado: {libro.titulo} ({libro.isbn})")
 
 # 2. READ: recuperar todos los libros y mostrar título y precio con un bucle

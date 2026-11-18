@@ -10,7 +10,7 @@
     <thead>
         <tr>
             <th>Título</th>
-            <th>Autor</th>
+            <th>Autores</th>
             <th>Género</th>
             <th>Estado</th>
         </tr>
@@ -19,7 +19,7 @@
         {% for libro in libros %}
         <tr>
             <td><a href="{% url 'detalle_libro' libro.pk %}">{{ libro.titulo }}</a></td>
-            <td>{{ libro.autor }}</td>
+            <td>{{ libro.autores.all|join:", "|default:"Sin autores" }}</td>
             <td>{{ libro.get_genero_display }}</td>
             <td>
                 {% if libro.disponible %}
