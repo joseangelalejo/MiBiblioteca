@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false
 """Actividad 6. Datos de prueba para las relaciones.
 
 Crea las editoriales y el usuario de prueba, asigna editorial a cinco libros y

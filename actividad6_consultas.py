@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false
 """Actividad 6. Consultas ORM sobre modelos relacionados.
 
 Consultas resueltas sin SQL directo, con el ORM de Django.
