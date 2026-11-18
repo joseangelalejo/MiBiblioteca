@@ -54,11 +54,11 @@ class PerfilUsuario(models.Model):
     biografia = models.TextField(blank=True)
 ```
 
-| Migración | Contenido |
-| --- | --- |
+| Migración              | Contenido                                      |
+| ---------------------- | ---------------------------------------------- |
 | `0006_libro_editorial` | Añade `Libro.editorial` (1:N, `PROTECT`, nula) |
-| `0007_libro_autores` | Añade `Libro.autores` (N:M) |
-| `0009_perfilusuario` | Crea `PerfilUsuario` (1:1 con el usuario) |
+| `0007_libro_autores`   | Añade `Libro.autores` (N:M)                    |
+| `0009_perfilusuario`   | Crea `PerfilUsuario` (1:1 con el usuario)      |
 
 Como `editorial` admite nulos y `autores` admite vacío, las migraciones se aplican sin perder ningún libro. La tabla intermedia de la relación N:M la crea Django: `catalogo_libro_autores`, con las claves de `Libro` y de `Autor`.
 
@@ -93,29 +93,29 @@ erDiagram
 
 ### Datos de prueba
 
-| Dato | Valor |
-| --- | --- |
-| Editoriales | *Editorial Horizonte* (España) y *Ediciones del Sur* (México) |
-| Autores | Los de `cargar_libros.py` (diez, uno por libro) |
+| Dato                      | Valor                                                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Editoriales               | *Editorial Horizonte* (España) y *Ediciones del Sur* (México)                                                                                                    |
+| Autores                   | Los de `cargar_libros.py` (diez, uno por libro)                                                                                                                  |
 | Editorial de cinco libros | Horizonte: *Don Quijote de la Mancha*, *Veinte poemas de amor y una canción desesperada* y *Persépolis*. Del Sur: *Bodas de sangre* y *Meditaciones del Quijote* |
-| Libro con dos autores | *Django en la práctica*: Laura Gómez y Pedro Ortiz |
-| Usuario de prueba | `lector_prueba`, con contraseña inutilizable (`set_unusable_password()`) y su `PerfilUsuario` |
+| Libro con dos autores     | *Django en la práctica*: Laura Gómez y Pedro Ortiz                                                                                                               |
+| Usuario de prueba         | `lector_prueba`, con contraseña inutilizable (`set_unusable_password()`) y su `PerfilUsuario`                                                                    |
 
 ### Resultados
 
 Con los datos anteriores. La salida completa la imprime `actividad6_consultas.py`.
 
-| Consulta | Resultado |
-| --- | --- |
-| 8. Libros de una editorial (`filter(editorial=...)`) | Horizonte: 3 libros |
-| 9. Libros de un autor (`filter(autores=...)`) | Pablo Neruda: *Veinte poemas de amor y una canción desesperada* |
-| 10. Autores de un libro (`libro.autores.all()`) | *Django en la práctica*: Laura Gómez y Pedro Ortiz |
-| 11. Libros por editorial (`annotate(Count("libros"))`) | Ediciones del Sur: 2; Editorial Horizonte: 3 |
-| 12. Eliminar una editorial con libros | `ProtectedError`: la editorial sigue existiendo |
-| 13. `related_name` (`horizonte.libros.all()`, `neruda.libros.all()`) | 3 libros y 1 libro; ambas editoriales tienen algún libro disponible |
-| 14. `select_related()` y `prefetch_related()` | Cada libro con su editorial y sus autores |
-| 15. `Prefetch` con libros disponibles | Del Sur: *Meditaciones del Quijote* (*Bodas de sangre* no está disponible); Horizonte: sus 3 libros |
-| 16. Consultas SQL antes y después | 16 consultas sin optimizar y 2 optimizadas |
+| Consulta                                                             | Resultado                                                                                           |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 8. Libros de una editorial (`filter(editorial=...)`)                 | Horizonte: 3 libros                                                                                 |
+| 9. Libros de un autor (`filter(autores=...)`)                        | Pablo Neruda: *Veinte poemas de amor y una canción desesperada*                                     |
+| 10. Autores de un libro (`libro.autores.all()`)                      | *Django en la práctica*: Laura Gómez y Pedro Ortiz                                                  |
+| 11. Libros por editorial (`annotate(Count("libros"))`)               | Ediciones del Sur: 2; Editorial Horizonte: 3                                                        |
+| 12. Eliminar una editorial con libros                                | `ProtectedError`: la editorial sigue existiendo                                                     |
+| 13. `related_name` (`horizonte.libros.all()`, `neruda.libros.all()`) | 3 libros y 1 libro; ambas editoriales tienen algún libro disponible                                 |
+| 14. `select_related()` y `prefetch_related()`                        | Cada libro con su editorial y sus autores                                                           |
+| 15. `Prefetch` con libros disponibles                                | Del Sur: *Meditaciones del Quijote* (*Bodas de sangre* no está disponible); Horizonte: sus 3 libros |
+| 16. Consultas SQL antes y después                                    | 16 consultas sin optimizar y 2 optimizadas                                                          |
 
 **Comparación de consultas (punto 16).** Recorrer los diez libros leyendo su editorial y sus autores sin optimizar lanza 16 consultas: 1 para los libros, 5 para la editorial de los libros que la tienen y 10 para los autores (una por libro). Con `select_related("editorial")` la editorial se obtiene con un `JOIN` en la misma consulta de los libros, y con `prefetch_related("autores")` los autores se cargan en una sola consulta adicional. En total, 2 consultas.
 
@@ -123,15 +123,15 @@ Con los datos anteriores. La salida completa la imprime `actividad6_consultas.py
 
 Qué ocurre con los libros al eliminar su editorial:
 
-| Opción | Efecto sobre los libros |
-| --- | --- |
-| `CASCADE` | Se eliminan también los libros de la editorial |
-| `PROTECT` | No se permite eliminar la editorial: lanza `ProtectedError` |
-| `RESTRICT` | Tampoco se permite eliminarla (`RestrictedError`), salvo que los libros se borren igualmente en la misma operación por otra relación `CASCADE` |
-| `SET_NULL` | Se elimina la editorial y los libros se conservan con `editorial = NULL` (exige `null=True`) |
-| `SET_DEFAULT` | Los libros pasan al valor por defecto del campo (que debe estar definido) |
-| `SET(...)` | Los libros pasan al valor que devuelva el valor o la función indicada |
-| `DO_NOTHING` | Django no hace nada y la integridad queda en manos de la base de datos, que puede dar un error de clave ajena |
+| Opción        | Efecto sobre los libros                                                                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CASCADE`     | Se eliminan también los libros de la editorial                                                                                                 |
+| `PROTECT`     | No se permite eliminar la editorial: lanza `ProtectedError`                                                                                    |
+| `RESTRICT`    | Tampoco se permite eliminarla (`RestrictedError`), salvo que los libros se borren igualmente en la misma operación por otra relación `CASCADE` |
+| `SET_NULL`    | Se elimina la editorial y los libros se conservan con `editorial = NULL` (exige `null=True`)                                                   |
+| `SET_DEFAULT` | Los libros pasan al valor por defecto del campo (que debe estar definido)                                                                      |
+| `SET(...)`    | Los libros pasan al valor que devuelva el valor o la función indicada                                                                          |
+| `DO_NOTHING`  | Django no hace nada y la integridad queda en manos de la base de datos, que puede dar un error de clave ajena                                  |
 
 **Prueba en una copia.** Para no tocar la base de datos real, se trabaja en una copia de la carpeta del proyecto, con su propio `db.sqlite3`:
 
@@ -145,12 +145,12 @@ python manage.py migrate
 python manage.py shell < actividad6_on_delete.py      # con SET_NULL
 ```
 
-| | `PROTECT` | `SET_NULL` |
-| --- | --- | --- |
-| Resultado de `editorial.delete()` | `ProtectedError` | La editorial se elimina |
-| Editoriales después | 2 | 1 |
-| Libros de Horizonte | Intactos, con su editorial | Siguen existiendo, con `editorial = NULL` (3 libros) |
-| Libros en total | 10 | 10 |
+|                                   | `PROTECT`                  | `SET_NULL`                                           |
+| --------------------------------- | -------------------------- | ---------------------------------------------------- |
+| Resultado de `editorial.delete()` | `ProtectedError`           | La editorial se elimina                              |
+| Editoriales después               | 2                          | 1                                                    |
+| Libros de Horizonte               | Intactos, con su editorial | Siguen existiendo, con `editorial = NULL` (3 libros) |
+| Libros en total                   | 10                         | 10                                                   |
 
 `PROTECT` obliga a reasignar o eliminar antes los libros, y protege la información; `SET_NULL` permite eliminar la editorial a costa de perder el dato de quién publicó cada libro.
 
