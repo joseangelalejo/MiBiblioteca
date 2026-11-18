@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404, render
 from .models import Libro, Autor, Editorial
-
+from django.db.models import Prefetch
 # Create your views here.
 
 def lista_libros(request):
@@ -30,4 +30,11 @@ def lista_editoriales(request, pk):
     editorial = get_object_or_404(Editorial, pk=pk)
     libros = Libro.objects.filter(editorial=editorial)
     cantidad_libros = libros.count()
+    #editoriales = Editorial.objects.prefetch_related(
+    #Prefetch(
+    #    "libros",
+    #    queryset=Libro.objects.filter(disponible=True),
+    #    to_attr="libros_disponibles",
+    #    )
+    #).order_by("nombre")
     return render(request, "catalogo/lista_editoriales.html", {"editorial": editorial, "libros": libros, "cantidad_libros": cantidad_libros})
