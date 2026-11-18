@@ -110,7 +110,7 @@ class Participacion(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.autor} participa en {self.libro}"
+        return f"{self.autor} - {self.libro} ({self.get_funcion_display()})"
 
 
 # Choices no siempre sustituye una relación ForeignKey porque no 
