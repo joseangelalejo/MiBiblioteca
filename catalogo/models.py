@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 # Create your models here.
@@ -73,6 +74,23 @@ class Autor(models.Model):
         verbose_name = "Autor"
         verbose_name_plural = "Autores"
         
+
+class PerfilUsuario(models.Model):
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="perfil",
+    )
+    biografia = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Perfil de {self.usuario}"
+
+    class Meta:
+        verbose_name = "Perfil de usuario"
+        verbose_name_plural = "Perfiles de usuario"
+
+
 # Choices no siempre sustituye una relación ForeignKey porque no 
 # permite almacenar información adicional sobre la relación.
 # Si quisiera almacenar la fecha en que un autor escribió un libro, no podríamos hacerlo con un campo de tipo Choice.
