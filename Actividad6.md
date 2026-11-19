@@ -157,24 +157,31 @@ python manage.py shell < actividad6_on_delete.py      # con SET_NULL
 ## Preguntas
 
 **¿Dónde se almacena una relación N:M?**
+
 En una tabla intermedia que Django crea automáticamente (aquí `catalogo_libro_autores`) con una clave ajena a cada uno de los dos modelos. Ninguna de las dos tablas principales guarda la relación.
 
 **¿Qué diferencia hay entre `ForeignKey` y `OneToOneField`?**
+
 Con `ForeignKey` muchos objetos pueden apuntar al mismo objeto (muchos libros, una editorial). `OneToOneField` es una clave ajena con restricción de unicidad: como mucho un objeto apunta a otro. Por eso el acceso inverso devuelve un solo objeto (`usuario.perfil`) y no un conjunto.
 
 **¿Para qué sirve `related_name`?**
+
 Para elegir el nombre con el que se accede a la relación desde el modelo relacionado y se usa en los filtros. Gracias a `related_name="libros"` se escribe `editorial.libros.all()` o `Editorial.objects.filter(libros__disponible=True)`, en lugar del nombre por defecto `libro_set`.
 
 **¿Qué aporta `through` frente a una relación N:M automática?**
+
 Permite usar un modelo intermedio propio para guardar datos de la relación (la función de un autor en un libro, una fecha) y definir restricciones sobre ella, como impedir duplicar la pareja libro-autor. La tabla automática solo contiene las dos claves ajenas.
 
 **¿En qué se diferencian `select_related()` y `prefetch_related()`?**
+
 `select_related()` hace un `JOIN` y trae el objeto relacionado en la misma consulta; sirve para relaciones de un solo objeto (`ForeignKey` y `OneToOneField`). `prefetch_related()` hace una consulta aparte por relación y las une en Python; sirve para relaciones múltiples (N:M y la parte inversa de una `ForeignKey`). Con `Prefetch` se puede además filtrar lo que se precarga.
 
 **¿Qué diferencia hay entre `PROTECT` y `RESTRICT`?**
+
 Las dos impiden eliminar un objeto referenciado. `PROTECT` lo impide siempre (`ProtectedError`). `RESTRICT` (`RestrictedError`) permite la eliminación si los objetos que lo referencian también se eliminan en la misma operación a través de otra relación `CASCADE`.
 
 **¿Por qué `SET_NULL` exige `null=True`?**
+
 Porque al eliminar el objeto referenciado Django escribe `NULL` en la clave ajena de los objetos que lo apuntaban. Si la columna no admitiera nulos, la base de datos rechazaría el cambio. Django lo comprueba al revisar el proyecto y da un error si falta `null=True`.
 
 **Siguiente bloque:** integridad de datos y transacciones.
