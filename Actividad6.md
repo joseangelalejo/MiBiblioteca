@@ -51,14 +51,16 @@ class PerfilUsuario(models.Model):
         on_delete=models.CASCADE,
         related_name="perfil",
     )
-    biografia = models.TextField(blank=True)
+    telefono = models.CharField(max_length=20, blank=True)
+    observaciones = models.TextField(blank=True)
 ```
 
-| Migración              | Contenido                                      |
-| ---------------------- | ---------------------------------------------- |
-| `0006_libro_editorial` | Añade `Libro.editorial` (1:N, `PROTECT`, nula) |
-| `0007_libro_autores`   | Añade `Libro.autores` (N:M)                    |
-| `0009_perfilusuario`   | Crea `PerfilUsuario` (1:1 con el usuario)      |
+| Migración                                   | Contenido                                                                                                 |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `0006_libro_editorial`                      | Añade `Libro.editorial` (1:N, `PROTECT`, nula)                                                            |
+| `0007_libro_autores`                        | Añade `Libro.autores` (N:M)                                                                               |
+| `0009_perfilusuario`                        | Crea `PerfilUsuario` (1:1 con el usuario)                                                                 |
+| `0012_perfilusuario_telefono_observaciones` | Ajusta `PerfilUsuario` al modelo de los apuntes: `biografia` pasa a `observaciones` y se añade `telefono` |
 
 Como `editorial` admite nulos y `autores` admite vacío, las migraciones se aplican sin perder ningún libro. La tabla intermedia de la relación N:M la crea Django: `catalogo_libro_autores`, con las claves de `Libro` y de `Autor`.
 
@@ -87,7 +89,8 @@ erDiagram
         string nacionalidad
     }
     PERFILUSUARIO {
-        text biografia
+        string telefono
+        text observaciones
     }
 ```
 

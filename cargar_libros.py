@@ -4,10 +4,11 @@ from decimal import Decimal
 from django.core.management.color import no_style
 from django.db import connection
 
-from catalogo.models import Autor, Libro
+from catalogo.models import Autor, Libro, Participacion, Prestamo
 
-# Si es True, vacía la tabla de libros (y sus relaciones con autores) y reinicia
-# sus IDs antes de cargar los datos. No borra los autores ni las editoriales.
+# Si es True, vacía la tabla de libros (y sus relaciones con autores, participaciones y
+# préstamos) y reinicia sus IDs antes de cargar los datos. No borra los autores ni las
+# editoriales.
 # Déjalo en False para conservar los libros actuales.
 REINICIAR = False
 
@@ -134,9 +135,14 @@ libros = [
 ]
 
 if REINICIAR:
-    # Vacía solo la tabla de libros y la de sus relaciones con autores, y reinicia
-    # sus contadores de IDs.
-    tablas = [Libro._meta.db_table, Libro.autores.through._meta.db_table]
+    # Vacía la tabla de libros y las que dependen de ella (autores, participaciones y
+    # préstamos), y reinicia sus contadores de IDs.
+    tablas = [
+        Libro._meta.db_table,
+        Libro.autores.through._meta.db_table,
+        Participacion._meta.db_table,
+        Prestamo._meta.db_table,
+    ]
     sql = connection.ops.sql_flush(no_style(), tablas, reset_sequences=True)
     connection.ops.execute_sql_flush(sql)
     print("Tabla de libros reiniciada")

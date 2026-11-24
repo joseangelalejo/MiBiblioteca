@@ -70,7 +70,7 @@ if creado:
     usuario.set_unusable_password()  # no se puede iniciar sesión con él
     usuario.save()
 perfil, _ = PerfilUsuario.objects.get_or_create(
-    usuario=usuario, defaults={"biografia": "Usuario de prueba"}
+    usuario=usuario, defaults={"observaciones": "Usuario de prueba"}
 )
 print(f"{usuario.username} -> {perfil}")
 print(f"Desde el usuario: usuario.perfil = {usuario.perfil}")

@@ -1,11 +1,10 @@
 from django.shortcuts import get_object_or_404, render
+from . import prestamos
 from .models import Libro, Autor, Editorial, Prestamo
 from django.db.models import Prefetch
-from django.utils import timezone
 
-from django.db import transaction
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 
 # Create your views here.
 
@@ -45,31 +44,25 @@ def lista_editoriales(request, pk):
     #).order_by("nombre")
     return render(request, "catalogo/lista_editoriales.html", {"editorial": editorial, "libros": libros, "cantidad_libros": cantidad_libros})
 
+
 def prestar_libro(request, pk_libro, pk_usuario):
-    with transaction.atomic():
-        libro = Libro.objects.select_for_update().get(pk=pk_libro)
-        if not libro.disponible:
-            raise ValueError("El libro no está disponible")
+    """Presta el libro `pk_libro` al usuario `pk_usuario` (la lógica está en `prestamos.py`)."""
+    usuario = get_object_or_404(get_user_model(), pk=pk_usuario)
+    try:
+        prestamo = prestamos.prestar_libro(pk_libro, usuario)
+    except Libro.DoesNotExist:
+        raise Http404("El libro no existe")
+    except ValueError as error:
+        return HttpResponse(str(error), status=409)
+    return HttpResponse(f"Préstamo {prestamo.pk} realizado correctamente")
 
-        usuario = get_user_model().objects.select_for_update().get(pk=pk_usuario)
-
-        prestamo = Prestamo.objects.create(
-            libro=libro,
-            usuario=usuario,
-        )
-        libro.disponible = False
-        libro.save(update_fields=["disponible"])
-        return HttpResponse("Préstamo realizado correctamente")
 
 def devolver_libro(request, pk_prestamo):
-    with transaction.atomic():
-        prestamo = Prestamo.objects.select_for_update().get(pk=pk_prestamo)
-        if prestamo.fecha_devolucion is not None:
-            raise ValueError("El préstamo ya fue devuelto")
-
-        prestamo.fecha_devolucion = timezone.now()
-        prestamo.save(update_fields=["fecha_devolucion"])
-        # raise RuntimeError("Error simulado")
-        prestamo.libro.disponible = True
-        prestamo.libro.save(update_fields=["disponible"])
-        return HttpResponse("Préstamo devuelto correctamente")
+    """Registra la devolución del préstamo `pk_prestamo`."""
+    try:
+        prestamos.devolver_libro(pk_prestamo)
+    except Prestamo.DoesNotExist:
+        raise Http404("El préstamo no existe")
+    except ValueError as error:
+        return HttpResponse(str(error), status=409)
+    return HttpResponse("Préstamo devuelto correctamente")

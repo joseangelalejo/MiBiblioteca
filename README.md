@@ -1,6 +1,6 @@
 # MiBiblioteca
 
-Práctica de Django de la unidad *Persistencia y ORM* (UT4): proyecto `biblioteca` con la aplicación `catalogo`, modelos `Libro`, `Editorial`, `Autor` y `PerfilUsuario` relacionados entre sí, migraciones, operaciones CRUD y consultas con el ORM. Base de datos SQLite.
+Práctica de Django de la unidad *Persistencia y ORM* (UT4): proyecto `biblioteca` con la aplicación `catalogo`, modelos `Libro`, `Editorial`, `Autor`, `PerfilUsuario` y `Prestamo` relacionados entre sí, migraciones, operaciones CRUD, consultas con el ORM, integridad de datos y transacciones. Base de datos SQLite.
 
 ## Requisitos
 
@@ -56,15 +56,17 @@ python manage.py shell < actividad6_datos.py
 python manage.py runserver
 ```
 
-| Ruta                       | Contenido                                           |
-| -------------------------- | --------------------------------------------------- |
-| `/`                        | Listado de libros                                   |
-| `/libro/<id>/`             | Detalle de un libro, con su editorial y sus autores |
-| `/editorial/<id>/`         | Editorial y los libros que publica                  |
-| `/editorial/<id>/libros/`  | Libros de una editorial y su cantidad               |
-| `/editorial/<id>/detalle/` | Datos de una editorial                              |
-| `/autor/<id>/`             | Datos de un autor y sus libros                      |
-| `/admin/`                  | Panel de administración                             |
+| Ruta                           | Contenido                                           |
+| ------------------------------ | --------------------------------------------------- |
+| `/`                            | Listado de libros                                   |
+| `/libro/<id>/`                 | Detalle de un libro, con su editorial y sus autores |
+| `/editorial/<id>/`             | Editorial y los libros que publica                  |
+| `/editorial/<id>/libros/`      | Libros de una editorial y su cantidad               |
+| `/editorial/<id>/detalle/`     | Datos de una editorial                              |
+| `/autor/<id>/`                 | Datos de un autor y sus libros                      |
+| `/prestamo/<libro>/<usuario>/` | Presta un libro a un usuario (Actividad 7)          |
+| `/devolucion/<prestamo>/`      | Registra la devolución de un préstamo (Actividad 7) |
+| `/admin/`                      | Panel de administración                             |
 
 Para entrar en el panel hay que crear antes un superusuario:
 
@@ -72,20 +74,21 @@ Para entrar en el panel hay que crear antes un superusuario:
 python manage.py createsuperuser
 ```
 
-Desde el panel se pueden gestionar `Libro`, `Autor` y `Editorial`.
+Desde el panel se pueden gestionar `Libro`, `Autor`, `Editorial` y `Prestamo`.
 
 ## Actividades de la UT4
 
-Cada actividad tiene su etiqueta (`ut4-act1` a `ut4-act6`) para localizar el estado exacto del proyecto en ese momento.
+Cada actividad tiene su etiqueta (`ut4-act1` a `ut4-act7`) para localizar el estado exacto del proyecto en ese momento.
 
-| Actividad                          | Contenido                                      | Archivos                                   |
-| ---------------------------------- | ---------------------------------------------- | ------------------------------------------ |
-| 1. Exploración de la base de datos | Proyecto, aplicación y migraciones iniciales   | `biblioteca/settings.py`                   |
-| 2. Creación de modelos             | `Autor`, `Editorial` y `Libro`                 | `catalogo/models.py`, `Actividad2.md`      |
-| 3. Gestión de migraciones          | Migraciones 0001 a 0005                        | `catalogo/migrations/`, `Actividad3.md`    |
-| 4. CRUD del catálogo               | Crear, leer, actualizar y borrar con el ORM    | `actividad4_crud.py`, `Actividad4.md`      |
-| 5. Boletín de consultas ORM        | 15 consultas con filtros, orden y agregaciones | `actividad5_consultas.py`, `Actividad5.md` |
-| 6. Modelos relacionados            | Relaciones 1:N, N:M y 1:1 y `on_delete`        | `actividad6_*.py`, `Actividad6.md`         |
+| Actividad                          | Contenido                                                   | Archivos                                                      |
+| ---------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
+| 1. Exploración de la base de datos | Proyecto, aplicación y migraciones iniciales                | `biblioteca/settings.py`                                      |
+| 2. Creación de modelos             | `Autor`, `Editorial` y `Libro`                              | `catalogo/models.py`, `Actividad2.md`                         |
+| 3. Gestión de migraciones          | Migraciones 0001 a 0005                                     | `catalogo/migrations/`, `Actividad3.md`                       |
+| 4. CRUD del catálogo               | Crear, leer, actualizar y borrar con el ORM                 | `actividad4_crud.py`, `Actividad4.md`                         |
+| 5. Boletín de consultas ORM        | 15 consultas con filtros, orden y agregaciones              | `actividad5_consultas.py`, `Actividad5.md`                    |
+| 6. Modelos relacionados            | Relaciones 1:N, N:M y 1:1 y `on_delete`                     | `actividad6_*.py`, `Actividad6.md`                            |
+| 7. Préstamos e integridad          | `Prestamo`, restricción de precio, transacciones y rollback | `catalogo/prestamos.py`, `catalogo/tests.py`, `Actividad7.md` |
 
 Los scripts de las actividades 4, 5 y 6 se ejecutan igual que la carga de datos (en Windows, con `PYTHONUTF8=1`, como se explica arriba):
 
@@ -104,17 +107,28 @@ Las consultas de la Actividad 6 (relaciones, `select_related()`, `prefetch_relat
 
 ## Migraciones
 
-| Migración                 | Cambio                                                                              |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| `0001_initial`            | Tablas de `Autor`, `Editorial` y `Libro`                                            |
-| `0002_libro_idioma`       | Campo `Libro.idioma`                                                                |
-| `0003_libro_recomendado`  | Campo `Libro.recomendado`                                                           |
-| `0004_editorial_pais`     | Campo `Editorial.pais`                                                              |
-| `0005_ajustes_actividad2` | `isbn` y `Editorial.nombre` únicos, `Editorial.activa` y `titulo` de 200 caracteres |
-| `0006_libro_editorial`    | Relación 1:N `Libro.editorial` (`PROTECT`, admite nulos)                            |
-| `0007_libro_autores`      | Relación N:M `Libro.autores`                                                        |
-| `0008_quitar_libro_autor` | Elimina `Libro.autor`, sustituido por la relación `autores`                         |
-| `0009_perfilusuario`      | Modelo `PerfilUsuario`, relación 1:1 con el usuario                                 |
+| Migración                                   | Cambio                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `0001_initial`                              | Tablas de `Autor`, `Editorial` y `Libro`                                            |
+| `0002_libro_idioma`                         | Campo `Libro.idioma`                                                                |
+| `0003_libro_recomendado`                    | Campo `Libro.recomendado`                                                           |
+| `0004_editorial_pais`                       | Campo `Editorial.pais`                                                              |
+| `0005_ajustes_actividad2`                   | `isbn` y `Editorial.nombre` únicos, `Editorial.activa` y `titulo` de 200 caracteres |
+| `0006_libro_editorial`                      | Relación 1:N `Libro.editorial` (`PROTECT`, admite nulos)                            |
+| `0007_libro_autores`                        | Relación N:M `Libro.autores`                                                        |
+| `0008_quitar_libro_autor`                   | Elimina `Libro.autor`, sustituido por la relación `autores`                         |
+| `0009_perfilusuario`                        | Modelo `PerfilUsuario`, relación 1:1 con el usuario                                 |
+| `0010_participacion`                        | Modelo intermedio `Participacion` (ampliación `through` de la Actividad 6)          |
+| `0011_prestamo_y_restriccion_precio`        | Modelo `Prestamo` y restricción `libro_precio_no_negativo` (Actividad 7)            |
+| `0012_perfilusuario_telefono_observaciones` | `PerfilUsuario`: `biografia` pasa a `observaciones` y se añade `telefono`           |
+
+## Pruebas
+
+Las pruebas de la Actividad 7 (préstamo correcto, operación rechazada, rollback y restricción de precio) usan una base de datos temporal y no tocan `db.sqlite3`:
+
+```bash
+python manage.py test catalogo
+```
 
 ## Configuración de la base de datos
 
@@ -162,13 +176,15 @@ El entorno virtual (`.venv/`), la base de datos local (`db.sqlite3`), los archiv
 MiBiblioteca/
 ├── biblioteca/            # configuración del proyecto
 ├── catalogo/              # aplicación: modelos, vistas, plantillas, migraciones
+│   ├── prestamos.py       # prestar_libro y devolver_libro (Actividad 7)
+│   └── tests.py           # pruebas de préstamos, rollback y restricción de precio
 ├── actividad4_crud.py
 ├── actividad5_consultas.py
 ├── actividad6_datos.py
 ├── actividad6_consultas.py
 ├── actividad6_on_delete.py
 ├── cargar_libros.py
-├── Actividad2.md ... Actividad6.md
+├── Actividad2.md ... Actividad7.md
 ├── manage.py
 └── requirements.txt
 ```
