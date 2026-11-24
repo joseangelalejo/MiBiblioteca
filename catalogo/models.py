@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.conf import settings
 
 # Create your models here.
 
@@ -45,6 +46,12 @@ class Libro(models.Model):
         ordering = ["titulo"]
         verbose_name = "Libro"
         verbose_name_plural = "Libros"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(precio__gte=0),
+                name="libro_precio_no_negativo",
+            ),
+        ]
     
 class Editorial(models.Model):
     nombre = models.CharField(max_length=150, unique=True)
@@ -117,3 +124,20 @@ class Participacion(models.Model):
 # permite almacenar información adicional sobre la relación.
 # Si quisiera almacenar la fecha en que un autor escribió un libro, no podríamos hacerlo con un campo de tipo Choice.
 # Sería más adecuado utilizar una relación ManyToMany(N:M) con un modelo intermedio que por normalización almacene la información adicional.
+
+class Prestamo(models.Model):
+    libro = models.ForeignKey(
+        "Libro", on_delete=models.PROTECT,
+        related_name="prestamos"
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="prestamos_biblioteca"
+    )
+    fecha_prestamo = models.DateTimeField(auto_now_add=True)
+    fecha_devolucion = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"Préstamo {self.pk}: {self.libro}"
+    
