@@ -2,6 +2,8 @@
 
 Práctica de Django (2º DAW, IES Hermanos Machado): proyecto `biblioteca`, app `catalogo`, con los modelos `Libro`, `Editorial`, `Autor`, `PerfilUsuario`, `Participacion` y `Prestamo`. Base de datos configurable por variables de entorno: SQLite o PostgreSQL.
 
+Aplicación desplegada: <https://mibiblioteca.joseangelinfra.dev>
+
 ## 1. Instalación, migraciones y ejecución
 
 ```bash
@@ -178,8 +180,7 @@ IntegrityError: CHECK constraint failed: libro_precio_no_negativo
 ## 7. Panel de administración
 
 - `Libro`: columnas título, ISBN, editorial, precio y disponible; filtros por editorial, disponibilidad y género; búsqueda por título, ISBN y autor.
-- `Prestamo`: columnas libro, usuario, fechas; filtro por devolución.
-- Registrados también `Autor`, `Editorial` y `PerfilUsuario`.
+- Registrados también `Autor`, `Editorial`, `PerfilUsuario` y `Prestamo` (con el listado por defecto).
 - Los tests (`IntegradoraTests.test_panel_de_administracion`) comprueban que listados, formularios de alta, búsqueda y filtros responden con 200.
 
 ## 8. Configuración de `DATABASES` y variables de entorno
