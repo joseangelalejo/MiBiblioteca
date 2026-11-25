@@ -1,6 +1,6 @@
 # MiBiblioteca
 
-Práctica de Django (2º DAW, IES Hermanos Machado): proyecto `biblioteca`, app `catalogo`, con los modelos `Libro`, `Editorial`, `Autor`, `PerfilUsuario`, `Participacion` y `Prestamo`. Base de datos SQLite por defecto.
+Práctica de Django (2º DAW, IES Hermanos Machado): proyecto `biblioteca`, app `catalogo`, con los modelos `Libro`, `Editorial`, `Autor`, `PerfilUsuario`, `Participacion` y `Prestamo`. Base de datos configurable por variables de entorno: SQLite o PostgreSQL.
 
 ## 1. Instalación, migraciones y ejecución
 
@@ -10,6 +10,10 @@ cd MiBiblioteca
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
+cp .env.example .env             # Windows: copy .env.example .env
+# Edita .env: pon DEBUG=True para desarrollo y completa los datos de la base de datos
+# (o usa DB_ENGINE=sqlite para trabajar sin PostgreSQL)
 
 python manage.py migrate
 python manage.py createsuperuser
@@ -178,37 +182,103 @@ IntegrityError: CHECK constraint failed: libro_precio_no_negativo
 - Registrados también `Autor`, `Editorial` y `PerfilUsuario`.
 - Los tests (`IntegradoraTests.test_panel_de_administracion`) comprueban que listados, formularios de alta, búsqueda y filtros responden con 200.
 
-## 8. Configuración de `DATABASES`
+## 8. Configuración de `DATABASES` y variables de entorno
 
-SQLite (por defecto):
+La configuración se lee con `python-decouple` desde un archivo `.env` (junto a `manage.py`), que **no se sube a Git**. El repositorio incluye `.env.example` con los nombres de las variables y sin contraseñas.
 
-```python
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+```env
+DB_ENGINE=postgresql        # sqlite o postgresql
+DB_NAME=biblioteca
+DB_USER=biblioteca_user
+DB_PASSWORD=                # se completa solo en el .env local
+DB_HOST=localhost
+DB_PORT=5432
+DEBUG=True                  # True solo en desarrollo
+SECRET_KEY=                 # opcional en local; obligatoria en el servidor
+ALLOWED_HOSTS=              # dominios permitidos separados por comas (servidor)
+# DATABASE_URL=             # solo en la nube (Vercel + Neon); tiene prioridad sobre DB_*
 ```
 
-PostgreSQL (sin credenciales en el código; se leen del entorno):
+`biblioteca/settings.py`:
 
 ```python
-import os
+from urllib.parse import unquote, urlparse
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "biblioteca"),
-        "USER": os.environ.get("DB_USER", ""),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+from decouple import config
+
+DEBUG = config("DEBUG", default=False, cast=bool)
+
+DB_ENGINE = config("DB_ENGINE", default="sqlite").lower()
+DATABASE_URL = config("DATABASE_URL", default="")
+
+if DATABASE_URL:
+    url = urlparse(DATABASE_URL)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": url.path.lstrip("/"),
+            "USER": unquote(url.username or ""),
+            "PASSWORD": unquote(url.password or ""),
+            "HOST": url.hostname,
+            "PORT": url.port or 5432,
+            "OPTIONS": {"sslmode": "require"},
+            "DISABLE_SERVER_SIDE_CURSORS": True,
+        }
     }
-}
+elif DB_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+elif DB_ENGINE == "postgresql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DB_NAME"),
+            "USER": config("DB_USER"),
+            "PASSWORD": config("DB_PASSWORD"),
+            "HOST": config("DB_HOST", default="localhost"),
+            "PORT": config("DB_PORT", default=5432, cast=int),
+        }
+    }
+else:
+    raise ValueError(f"Gestor de base de datos no admitido: {DB_ENGINE}")
 ```
 
-Pasos para pasar a PostgreSQL: crear base de datos y usuario, `pip install psycopg[binary]`, definir las variables de entorno `DB_*`, sustituir `DATABASES` y ejecutar `python manage.py migrate`. La prueba contra PostgreSQL no se ha realizado.
+Sin `.env`, el proyecto usa SQLite y `DEBUG=False`. Si existe `DATABASE_URL` (despliegue en la nube), se usa esa conexión PostgreSQL con SSL y se ignoran los `DB_*`. `SECRET_KEY` y `ALLOWED_HOSTS` también se leen con `config()` (`ALLOWED_HOSTS` como lista separada por comas con `Csv()`), y `STATIC_ROOT` apunta a `static/`, la carpeta que genera `collectstatic`.
+
+### Preparar PostgreSQL
+
+Con PostgreSQL instalado y en marcha, se crean el usuario y la base de datos una sola vez:
+
+```sql
+CREATE USER biblioteca_user WITH PASSWORD 'tu_clave_local';
+CREATE DATABASE biblioteca OWNER biblioteca_user;
+ALTER USER biblioteca_user CREATEDB;   -- necesario para ejecutar los tests
+```
+
+Después, con `DB_ENGINE=postgresql` y los datos reales en `.env`:
+
+```bash
+python manage.py check
+python manage.py showmigrations catalogo
+python manage.py migrate
+python manage.py shell
+```
+
+```python
+from django.db import connection
+print(connection.vendor)      # postgresql   (con DB_ENGINE=sqlite: sqlite)
+```
+
+Notas:
+
+- `migrate` crea el esquema, pero **no copia los registros** de SQLite a PostgreSQL. Para eso habría que exportar e importar los datos aparte.
+- `cargar_libros.py` carga los datos de ejemplo en la base de datos activa.
+- Con PostgreSQL, `select_for_update()` genera `SELECT ... FOR UPDATE` y bloquea la fila; con SQLite no tiene efecto.
+- Los mensajes de error de integridad cambian según el gestor, pero la restricción se aplica en ambos.
 
 ## 9. Preguntas finales
 
@@ -216,15 +286,73 @@ Pasos para pasar a PostgreSQL: crear base de datos y usuario, `pip install psyco
 2. **Migraciones como código.** Son archivos versionados que describen los cambios del esquema, se aplican en el mismo orden en cualquier máquina y quedan en el historial de Git.
 3. **FK, M2M y O2O.** `ForeignKey`: muchos a uno (libro → editorial). `ManyToManyField`: muchos a muchos (libros ↔ autores). `OneToOneField`: uno a uno (usuario ↔ perfil).
 4. **Por qué el préstamo necesita transacción.** Crea el préstamo y marca el libro como no disponible: si falla uno de los dos pasos, no debe quedar el otro a medias.
-5. **Pasos para PostgreSQL.** Los del apartado 8.
+5. **Pasos para PostgreSQL.** Instalar `psycopg[binary]` y `python-decouple`, crear el usuario y la base de datos, copiar `.env.example` a `.env` con `DB_ENGINE=postgresql` y los datos reales, y ejecutar `python manage.py migrate` (detalle en el apartado 8).
 
-## 10. Estructura
+## 10. Despliegue en Vercel con PostgreSQL en Neon
+
+Vercel ejecuta la aplicación como función serverless con el sistema de archivos de solo lectura, por lo que **SQLite no sirve** allí. La base de datos es PostgreSQL en Neon, conectada desde el Marketplace de Vercel, que crea la variable `DATABASE_URL`. Django 6.1 necesita Python 3.12 o superior.
+
+Vercel detecta `manage.py` y el `WSGI_APPLICATION` de `settings.py`, instala `requirements.txt` y, como hay `STATIC_ROOT`, ejecuta `collectstatic` en el build y sirve los estáticos desde su CDN. No hacen falta `vercel.json` ni WhiteNoise.
+
+### 10.1. Código
+
+El repositorio está en GitHub (`.env`, `db.sqlite3` y `static/` no se suben). El único ajuste respecto al uso local es que `settings.py` lee `DATABASE_URL` (apartado 8).
+
+### 10.2. Crear el proyecto en Vercel
+
+1. En <https://vercel.com/new>, importar el repositorio de GitHub. El preset detectado es **Django** y el directorio raíz `./`.
+2. Añadir las variables de entorno (Production y Preview):
+
+| Variable        | Valor                                  |
+| --------------- | -------------------------------------- |
+| `SECRET_KEY`    | clave nueva (marcada como *Sensitive*) |
+| `ALLOWED_HOSTS` | `.vercel.app`                          |
+| `DEBUG`         | `False`                                |
+
+La clave se genera con:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
+```
+
+3. Pulsar **Deploy**.
+
+### 10.3. Base de datos Neon
+
+1. En el proyecto: **Storage → Create Database → Neon**, plan gratuito, conectada a Production, Preview y Development.
+2. Comprobar que en *Settings → Environment Variables* aparece `DATABASE_URL`.
+3. **Redeploy** desde *Deployments* para que el despliegue use la variable.
+
+### 10.4. Migraciones y datos
+
+El despliegue no ejecuta las migraciones. Se aplican desde el equipo local contra Neon, sin guardar la URL en ningún archivo:
+
+```bash
+read -s "DATABASE_URL?Pega la DATABASE_URL de Neon: " && export DATABASE_URL
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py shell < cargar_libros.py       # datos de ejemplo (opcional)
+unset DATABASE_URL
+```
+
+La `DATABASE_URL` es un secreto: no se sube a Git. No se ejecutan los tests con la variable exportada.
+
+### 10.5. Actualizar el sitio
+
+Cada `git push` a `main` genera un despliegue nuevo. Si hay migraciones nuevas, se repite el apartado 10.4.
+
+### 10.6. Si algo falla
+
+Los registros están en la pestaña *Logs* del despliegue. Fallos habituales: `DisallowedHost` o 400 (falta el dominio en `ALLOWED_HOSTS`), 403 de CSRF en el admin (añadir `CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]`), `relation ... does not exist` (faltan las migraciones), build con Python antiguo (crear `.python-version` con `3.12`) y admin sin estilos (falta `STATIC_ROOT`).
+
+## 11. Estructura
 
 ```text
 biblioteca/        configuración del proyecto
 catalogo/          app: models.py, views.py, admin.py, tests.py, urls.py, migrations/
 cargar_libros.py   datos de ejemplo
 requirements.txt
+.env.example       plantilla de variables de entorno (sin contraseñas)
 ```
 
 No se versionan: `.venv/`, `db.sqlite3`, `.env`, credenciales.

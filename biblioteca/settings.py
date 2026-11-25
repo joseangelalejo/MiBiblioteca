@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+from decouple import Csv, config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +23,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pvv)lq$##(coh695!pa8z-a9c$7rj-))n8rq#qd7+gy!4z=qum'
+SECRET_KEY = config(
+    "SECRET_KEY",
+    default="django-insecure-pvv)lq$##(coh695!pa8z-a9c$7rj-))n8rq#qd7+gy!4z=qum",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv())
 
 
 # Application definition
@@ -73,12 +79,45 @@ WSGI_APPLICATION = 'biblioteca.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DB_ENGINE = config("DB_ENGINE", default="sqlite").lower()
+
+# En Vercel, Neon proporciona toda la conexión en una sola variable.
+DATABASE_URL = config("DATABASE_URL", default="")
+
+if DATABASE_URL:
+    url = urlparse(DATABASE_URL)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": url.path.lstrip("/"),
+            "USER": unquote(url.username or ""),
+            "PASSWORD": unquote(url.password or ""),
+            "HOST": url.hostname,
+            "PORT": url.port or 5432,
+            "OPTIONS": {"sslmode": "require"},
+            "DISABLE_SERVER_SIDE_CURSORS": True,
+        }
     }
-}
+elif DB_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+elif DB_ENGINE == "postgresql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DB_NAME"),
+            "USER": config("DB_USER"),
+            "PASSWORD": config("DB_PASSWORD"),
+            "HOST": config("DB_HOST", default="localhost"),
+            "PORT": config("DB_PORT", default=5432, cast=int),
+        }
+    }
+else:
+    raise ValueError(f"Gestor de base de datos no admitido: {DB_ENGINE}")
 
 
 # Password validation
@@ -116,6 +155,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "static"
 
 
 # Email
