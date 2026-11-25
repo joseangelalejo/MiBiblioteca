@@ -41,7 +41,7 @@ erDiagram
     AUTOR { string nombre string apellidos string nacionalidad }
     LIBRO { string titulo string isbn UK decimal precio date fecha_publicacion bool disponible }
     PRESTAMO { datetime fecha_prestamo datetime fecha_devolucion }
-    PERFILUSUARIO { text biografia string telefono text observaciones }
+    PERFILUSUARIO { string telefono text observaciones }
 ```
 
 Reglas de integridad:
@@ -195,7 +195,7 @@ DB_PASSWORD=                # se completa solo en el .env local
 DB_HOST=localhost
 DB_PORT=5432
 DEBUG=True                  # True solo en desarrollo
-SECRET_KEY=                 # opcional en local; obligatoria en el servidor
+# SECRET_KEY=               # opcional en local; obligatoria en el servidor
 ALLOWED_HOSTS=              # dominios permitidos separados por comas (servidor)
 # DATABASE_URL=             # solo en la nube (Vercel + Neon); tiene prioridad sobre DB_*
 ```
