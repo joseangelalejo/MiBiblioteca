@@ -9,6 +9,6 @@ urlpatterns = [
     path("autor/<int:pk>/", views.detalle_autor, name="detalle_autor"),
     path("editorial/<int:pk>/libros/", views.lista_editoriales, name="lista_editoriales"),
     path("editorial/<int:pk>/detalle/", views.detalle_editorial, name="detalle_editorial"),
-    path("prestamo/<int:pk_libro>/<int:pk_usuario>/", views.prestar_libro, name="prestamo"),
-    path("devolucion/<int:pk_prestamo>/", views.devolver_libro, name="devolucion"),
+    path("prestamo/<int:pk_libro>/<int:pk_usuario>/", views.prestar_libro_vista, name="prestamo"),
+    path("devolucion/<int:pk_prestamo>/", views.devolver_libro_vista, name="devolucion"),
 ]

@@ -11,11 +11,26 @@ from unittest import mock
 from django.urls import reverse
 
 from .models import Libro, Prestamo
-from .prestamos import devolver_libro, prestar_libro
+from .views import (
+    devolver_libro,
+    buscar_libros,
+    crear_editorial_y_autores,
+    crear_tres_libros,
+    eliminar_libro,
+    libro_por_isbn,
+    libros_de_autor,
+    libros_de_editorial,
+    libros_disponibles,
+    libros_por_editorial,
+    modificar_precio,
+    precio_medio,
+    prestamos_activos,
+    prestar_libro,
+)
 
 
 class PrestamosTests(TestCase):
-    """Actividad 7. Se ejecutan con: python manage.py test catalogo
+    """Se ejecutan con: python manage.py test catalogo
 
     Django crea una base de datos de prueba aparte, así que no tocan db.sqlite3.
     """
@@ -90,7 +105,7 @@ class PrestamosTests(TestCase):
 
 
 class VistasPrestamosTests(TestCase):
-    """Las vistas de /prestamo/ y /devolucion/ usan las funciones de prestamos.py."""
+    """Las vistas de /prestamo/ y /devolucion/ llaman a prestar_libro y devolver_libro."""
 
     def setUp(self):
         self.usuario = get_user_model().objects.create_user(username="lector")
@@ -129,3 +144,62 @@ class VistasPrestamosTests(TestCase):
         self.assertEqual(self.client.get(reverse("prestamo", args=[999, self.usuario.pk])).status_code, 404)
         self.assertEqual(self.client.get(reverse("prestamo", args=[self.libro.pk, 999])).status_code, 404)
         self.assertEqual(self.client.get(reverse("devolucion", args=[999])).status_code, 404)
+
+class IntegradoraTests(TestCase):
+    """Restricción de préstamo activo, CRUD, consultas y panel de administración."""
+
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(username="lector_integradora")
+        self.editorial, self.autor_uno, self.autor_dos = crear_editorial_y_autores()
+        self.libros = crear_tres_libros(self.editorial, self.autor_uno, self.autor_dos)
+
+    def test_un_solo_prestamo_activo_por_libro(self):
+        libro = self.libros[0]
+        Prestamo.objects.create(libro=libro, usuario=self.usuario)
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Prestamo.objects.create(libro=libro, usuario=self.usuario)
+
+    def test_se_puede_prestar_de_nuevo_tras_la_devolucion(self):
+        libro = self.libros[0]
+        prestamo = prestar_libro(libro.pk, self.usuario)
+        devolver_libro(prestamo.pk)
+        self.assertIsNotNone(prestar_libro(libro.pk, self.usuario))
+
+    def test_crud(self):
+        self.assertEqual(Libro.objects.filter(editorial=self.editorial).count(), 3)
+        self.assertEqual(self.libros[1].autores.count(), 2)
+        libro = libro_por_isbn("9780000001001")
+        self.assertEqual(libro.titulo, "Libro Demo 1")
+        self.assertEqual(modificar_precio("9780000001001", Decimal("15.00")).precio, Decimal("15.00"))
+        eliminar_libro("9780000001003")
+        self.assertFalse(Libro.objects.filter(isbn="9780000001003").exists())
+
+    def test_no_se_elimina_un_libro_con_prestamos(self):
+        prestar_libro(self.libros[0].pk, self.usuario)
+        with self.assertRaises(ValueError):
+            eliminar_libro("9780000001001")
+
+    def test_consultas(self):
+        prestar_libro(self.libros[0].pk, self.usuario)
+        self.assertEqual(
+            [libro.titulo for libro in libros_disponibles()], ["Libro Demo 2", "Libro Demo 3"]
+        )
+        self.assertEqual(buscar_libros("demo 2").count(), 1)
+        self.assertEqual(libros_de_editorial(self.editorial.pk).count(), 3)
+        self.assertEqual(libros_de_autor(self.autor_dos.pk).count(), 2)
+        self.assertEqual(round(precio_medio(), 2), Decimal("13.47"))  # (12,50 + 18,00 + 9,90) / 3
+        self.assertEqual(libros_por_editorial().get(pk=self.editorial.pk).total_libros, 3)
+        self.assertEqual([p.libro.isbn for p in prestamos_activos()], ["9780000001001"])
+
+    def test_panel_de_administracion(self):
+        admin_user = get_user_model().objects.create_superuser(username="admin_integradora")
+        self.client.force_login(admin_user)
+        for modelo in ("libro", "autor", "editorial", "perfilusuario", "prestamo"):
+            url = reverse(f"admin:catalogo_{modelo}_changelist")
+            self.assertEqual(self.client.get(url).status_code, 200, modelo)
+            self.assertEqual(self.client.get(reverse(f"admin:catalogo_{modelo}_add")).status_code, 200, modelo)
+        url = reverse("admin:catalogo_libro_changelist")
+        self.assertEqual(self.client.get(url, {"q": "9780000001001"}).status_code, 200)
+        self.assertEqual(self.client.get(url, {"editorial__id__exact": self.editorial.pk}).status_code, 200)
+        self.assertEqual(self.client.get(url, {"disponible__exact": "1"}).status_code, 200)

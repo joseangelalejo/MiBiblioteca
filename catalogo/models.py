@@ -140,3 +140,12 @@ class Prestamo(models.Model):
     
     def __str__(self):
         return f"Préstamo {self.pk}: {self.libro}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["libro"],
+                condition=models.Q(fecha_devolucion__isnull=True),
+                name="un_prestamo_activo_por_libro",
+            ),
+        ]

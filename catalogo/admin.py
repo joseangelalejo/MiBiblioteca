@@ -1,13 +1,14 @@
 from django.contrib import admin
 
-from .models import Autor, Editorial, Libro, Prestamo
+from .models import Autor, Editorial, Libro, PerfilUsuario, Prestamo
 
 # Register your models here
 
 @admin.register(Libro)
 class LibroAdmin(admin.ModelAdmin):
-    list_display = ("titulo", "genero", "anio_publicacion", "disponible")
-    list_filter = ("genero", "disponible")
+    list_display = ("titulo", "isbn", "editorial", "precio", "disponible")
+    list_filter = ("editorial", "disponible", "genero")
+    list_select_related = ("editorial",)
     search_fields = ("titulo", "autores__nombre", "autores__apellidos", "isbn")
     ordering = ("titulo",)
     list_per_page = 5
@@ -20,3 +21,4 @@ class LibroAdmin(admin.ModelAdmin):
 admin.site.register(Autor)
 admin.site.register(Editorial)
 admin.site.register(Prestamo)
+admin.site.register(PerfilUsuario)

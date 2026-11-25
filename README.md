@@ -1,140 +1,186 @@
 # MiBiblioteca
 
-Práctica de Django de la unidad *Persistencia y ORM* (UT4): proyecto `biblioteca` con la aplicación `catalogo`, modelos `Libro`, `Editorial`, `Autor`, `PerfilUsuario` y `Prestamo` relacionados entre sí, migraciones, operaciones CRUD, consultas con el ORM, integridad de datos y transacciones. Base de datos SQLite.
+Práctica de Django (2º DAW, IES Hermanos Machado): proyecto `biblioteca`, app `catalogo`, con los modelos `Libro`, `Editorial`, `Autor`, `PerfilUsuario`, `Participacion` y `Prestamo`. Base de datos SQLite por defecto.
 
-## Requisitos
-
-- Python 3.12 o superior
-- Django 6.1.3 (se instala con `requirements.txt`)
-
-## Instalar
+## 1. Instalación, migraciones y ejecución
 
 ```bash
 git clone <url-del-repositorio>
 cd MiBiblioteca
-
 python -m venv .venv
-# Windows (PowerShell):  .venv\Scripts\Activate.ps1
-# Linux / macOS:         source .venv/bin/activate
-
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-## Migrar
-
-La base de datos `db.sqlite3` no se versiona: se crea al aplicar las migraciones.
-
-```bash
 python manage.py migrate
-```
-
-Para comprobar el estado de las migraciones:
-
-```bash
-python manage.py showmigrations catalogo
-```
-
-## Cargar datos de ejemplo
-
-`cargar_libros.py` carga diez libros de ejemplo. Con `REINICIAR = True` (variable al principio del archivo) vacía antes la tabla de libros (y sus relaciones con autores) y reinicia sus IDs; con `False` conserva los existentes.
-
-```bash
-python manage.py shell < cargar_libros.py
-```
-
-Para la Actividad 6, `actividad6_datos.py` añade dos editoriales, asigna editorial a cinco libros, añade un segundo autor a uno de ellos y crea un usuario de prueba con su perfil (con contraseña inutilizable). Se ejecuta después de `cargar_libros.py`:
-
-```bash
-python manage.py shell < actividad6_datos.py
-```
-
-> **Windows:** el operador `<` no está disponible en PowerShell, así que ejecuta estos comandos desde CMD o Git Bash. Antes, define `PYTHONUTF8=1` para que las tildes se guarden bien en la base de datos (`set PYTHONUTF8=1` en CMD, `export PYTHONUTF8=1` en Git Bash). En PowerShell: `$env:PYTHONUTF8 = "1"` y después `cmd /c "python manage.py shell < cargar_libros.py"`.
-
-## Ejecutar
-
-```bash
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
-| Ruta                           | Contenido                                           |
-| ------------------------------ | --------------------------------------------------- |
-| `/`                            | Listado de libros                                   |
-| `/libro/<id>/`                 | Detalle de un libro, con su editorial y sus autores |
-| `/editorial/<id>/`             | Editorial y los libros que publica                  |
-| `/editorial/<id>/libros/`      | Libros de una editorial y su cantidad               |
-| `/editorial/<id>/detalle/`     | Datos de una editorial                              |
-| `/autor/<id>/`                 | Datos de un autor y sus libros                      |
-| `/prestamo/<libro>/<usuario>/` | Presta un libro a un usuario (Actividad 7)          |
-| `/devolucion/<prestamo>/`      | Registra la devolución de un préstamo (Actividad 7) |
-| `/admin/`                      | Panel de administración                             |
+- Web: <http://127.0.0.1:8000/>
+- Administración: <http://127.0.0.1:8000/admin/>
+- Datos de ejemplo (opcional): `python manage.py shell < cargar_libros.py` (con `REINICIAR = True` borra y vuelve a crear los datos de ejemplo).
+- Tests: `python manage.py test catalogo`
 
-Para entrar en el panel hay que crear antes un superusuario:
+## 2. Modelo de datos
 
-```bash
-python manage.py createsuperuser
+```mermaid
+erDiagram
+    EDITORIAL ||--o{ LIBRO : publica
+    LIBRO }o--o{ AUTOR : "escrito por (Participacion)"
+    LIBRO ||--o{ PRESTAMO : tiene
+    USER ||--o{ PRESTAMO : solicita
+    USER ||--o| PERFILUSUARIO : tiene
+
+    EDITORIAL { string nombre string email string pais }
+    AUTOR { string nombre string apellidos string nacionalidad }
+    LIBRO { string titulo string isbn UK decimal precio date fecha_publicacion bool disponible }
+    PRESTAMO { datetime fecha_prestamo datetime fecha_devolucion }
+    PERFILUSUARIO { text biografia string telefono text observaciones }
 ```
 
-Desde el panel se pueden gestionar `Libro`, `Autor`, `Editorial` y `Prestamo`.
+Reglas de integridad:
 
-## Actividades de la UT4
+| Regla                                                                 | Dónde se garantiza                                                                     |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| El ISBN es único                                                      | `unique=True` en `Libro.isbn`                                                          |
+| El precio no es negativo                                              | `CheckConstraint` `libro_precio_no_negativo`                                           |
+| Un libro no puede tener más de un préstamo activo                     | `UniqueConstraint` parcial `un_prestamo_activo_por_libro` (`fecha_devolucion IS NULL`) |
+| No se borra un libro, un usuario ni una editorial con datos asociados | `on_delete=PROTECT`                                                                    |
+| Prestar y devolver es todo o nada                                     | `transaction.atomic()` en `prestar_libro` y `devolver_libro`                           |
 
-Cada actividad tiene su etiqueta (`ut4-act1` a `ut4-act7`) para localizar el estado exacto del proyecto en ese momento.
-
-| Actividad                          | Contenido                                                   | Archivos                                                      |
-| ---------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
-| 1. Exploración de la base de datos | Proyecto, aplicación y migraciones iniciales                | `biblioteca/settings.py`                                      |
-| 2. Creación de modelos             | `Autor`, `Editorial` y `Libro`                              | `catalogo/models.py`, `Actividad2.md`                         |
-| 3. Gestión de migraciones          | Migraciones 0001 a 0005                                     | `catalogo/migrations/`, `Actividad3.md`                       |
-| 4. CRUD del catálogo               | Crear, leer, actualizar y borrar con el ORM                 | `actividad4_crud.py`, `Actividad4.md`                         |
-| 5. Boletín de consultas ORM        | 15 consultas con filtros, orden y agregaciones              | `actividad5_consultas.py`, `Actividad5.md`                    |
-| 6. Modelos relacionados            | Relaciones 1:N, N:M y 1:1 y `on_delete`                     | `actividad6_*.py`, `Actividad6.md`                            |
-| 7. Préstamos e integridad          | `Prestamo`, restricción de precio, transacciones y rollback | `catalogo/prestamos.py`, `catalogo/tests.py`, `Actividad7.md` |
-
-Los scripts de las actividades 4, 5 y 6 se ejecutan igual que la carga de datos (en Windows, con `PYTHONUTF8=1`, como se explica arriba):
+## 3. Migraciones
 
 ```bash
-python manage.py shell < actividad4_crud.py
-python manage.py shell < actividad5_consultas.py
-python manage.py shell < actividad6_datos.py
-python manage.py shell < actividad6_consultas.py
+python manage.py makemigrations
+python manage.py migrate
+python manage.py showmigrations catalogo
 ```
 
-### Consultas ORM y resultados
+| Migración                                   | Contenido                                                               |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `0001`–`0010`                               | Modelos iniciales, editorial, M2M con autores, perfil y `Participacion` |
+| `0011_prestamo_y_restriccion_precio`        | Modelo `Prestamo` y restricción de precio no negativo                   |
+| `0012_perfilusuario_telefono_observaciones` | Campos nuevos de `PerfilUsuario`                                        |
+| `0013_un_prestamo_activo_por_libro`         | Un solo préstamo activo por libro                                       |
 
-Las 15 consultas de la Actividad 5, con sus resultados y las respuestas a las preguntas, están en [`Actividad5.md`](Actividad5.md). El script [`actividad5_consultas.py`](actividad5_consultas.py) las ejecuta e imprime los resultados. Para obtener los mismos datos, hay que partir de los diez libros de `cargar_libros.py` con `REINICIAR = True`.
+## 4. CRUD (funciones de `catalogo/views.py`)
 
-Las consultas de la Actividad 6 (relaciones, `select_related()`, `prefetch_related()`, `Prefetch` y `on_delete`), con el diagrama de relaciones y las respuestas a las preguntas, están en [`Actividad6.md`](Actividad6.md). Los scripts [`actividad6_datos.py`](actividad6_datos.py) y [`actividad6_consultas.py`](actividad6_consultas.py) crean los datos y ejecutan las consultas. Para obtener los mismos resultados, hay que partir de una base de datos nueva (`python manage.py migrate`) con los datos de `cargar_libros.py` y `actividad6_datos.py`. El script [`actividad6_on_delete.py`](actividad6_on_delete.py) se ejecuta en una copia del proyecto para comparar `PROTECT` y `SET_NULL`, como se explica en `Actividad6.md`.
+Se ejecutan desde `python manage.py shell`.
 
-## Migraciones
+```python
+from catalogo.views import (
+    crear_editorial_y_autores, crear_tres_libros, libro_por_isbn,
+    modificar_precio, eliminar_libro,
+)
 
-| Migración                                   | Cambio                                                                              |
-| ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `0001_initial`                              | Tablas de `Autor`, `Editorial` y `Libro`                                            |
-| `0002_libro_idioma`                         | Campo `Libro.idioma`                                                                |
-| `0003_libro_recomendado`                    | Campo `Libro.recomendado`                                                           |
-| `0004_editorial_pais`                       | Campo `Editorial.pais`                                                              |
-| `0005_ajustes_actividad2`                   | `isbn` y `Editorial.nombre` únicos, `Editorial.activa` y `titulo` de 200 caracteres |
-| `0006_libro_editorial`                      | Relación 1:N `Libro.editorial` (`PROTECT`, admite nulos)                            |
-| `0007_libro_autores`                        | Relación N:M `Libro.autores`                                                        |
-| `0008_quitar_libro_autor`                   | Elimina `Libro.autor`, sustituido por la relación `autores`                         |
-| `0009_perfilusuario`                        | Modelo `PerfilUsuario`, relación 1:1 con el usuario                                 |
-| `0010_participacion`                        | Modelo intermedio `Participacion` (ampliación `through` de la Actividad 6)          |
-| `0011_prestamo_y_restriccion_precio`        | Modelo `Prestamo` y restricción `libro_precio_no_negativo` (Actividad 7)            |
-| `0012_perfilusuario_telefono_observaciones` | `PerfilUsuario`: `biografia` pasa a `observaciones` y se añade `telefono`           |
-
-## Pruebas
-
-Las pruebas de la Actividad 7 (préstamo correcto, operación rechazada, rollback y restricción de precio) usan una base de datos temporal y no tocan `db.sqlite3`:
-
-```bash
-python manage.py test catalogo
+editorial, autor_uno, autor_dos = crear_editorial_y_autores()
+libros = crear_tres_libros(editorial, autor_uno, autor_dos)
+libro_por_isbn("9780000001001")
+modificar_precio("9780000001001", "15.00")
+eliminar_libro("9780000001003")
 ```
 
-## Configuración de la base de datos
+Resultado:
 
-La configuración de `DATABASES` está en `biblioteca/settings.py`.
+```text
+--- 1. Editorial y dos autores
+Editorial Demo | Ana Demo Uno | Luis Demo Dos
+--- 2. Tres libros con sus autores
+9780000001001 Libro Demo 1 ['Ana Demo Uno']
+9780000001002 Libro Demo 2 ['Luis Demo Dos', 'Ana Demo Uno']
+9780000001003 Libro Demo 3 ['Luis Demo Dos']
+--- 3. Recuperar por ISBN
+Libro Demo 1 | precio: 12.50
+--- 4. Modificar el precio
+Libro Demo 1 | precio: 15.00
+--- 5. Eliminar un libro sin préstamos
+(2, {'catalogo.Libro_autores': 1, 'catalogo.Libro': 1})
+```
 
-### SQLite (configuración actual)
+`eliminar_libro` lanza `ValueError` si el libro tiene préstamos.
+
+## 5. Consultas ORM
+
+```python
+from catalogo.views import (
+    libros_disponibles, buscar_libros, libros_de_editorial, libros_de_autor,
+    precio_medio, libros_por_editorial, prestamos_activos,
+)
+```
+
+| #   | Consulta                                | ORM                                                        |
+| --- | --------------------------------------- | ---------------------------------------------------------- |
+| 1   | Libros disponibles ordenados por título | `Libro.objects.filter(disponible=True).order_by("titulo")` |
+| 2   | Buscar por texto en el título           | `Libro.objects.filter(titulo__icontains=texto)`            |
+| 3   | Libros de una editorial                 | `Libro.objects.filter(editorial_id=editorial_id)`          |
+| 4   | Libros de un autor                      | `Libro.objects.filter(autores__id=autor_id)`               |
+| 5   | Precio medio                            | `Libro.objects.aggregate(precio_medio=Avg("precio"))`      |
+| 6   | Número de libros por editorial          | `Editorial.objects.annotate(total_libros=Count("libros"))` |
+| 7   | Préstamos activos                       | `Prestamo.objects.filter(fecha_devolucion__isnull=True)`   |
+
+Resultados (con los datos de `cargar_libros.py` más los del apartado 4):
+
+```text
+--- 1. Libros disponibles ordenados por título
+10 libros; los tres primeros:
+   Aplicaciones web con Django y Python
+   Django en la práctica
+   Don Quijote de la Mancha
+--- 2. Buscar por título ('django')
+['Aplicaciones web con Django y Python', 'Django en la práctica']
+--- 3. Libros de la editorial 'Editorial Demo'
+['Libro Demo 1', 'Libro Demo 2']
+--- 4. Libros de un autor (Ana Demo Uno)
+['Libro Demo 1', 'Libro Demo 2']
+--- 5. Precio medio
+19.62
+--- 6. Número de libros de cada editorial
+  Editorial Demo 2
+--- 7. Préstamos activos (todavía ninguno)
+[]
+```
+
+## 6. Préstamos, devoluciones y rollback
+
+Las operaciones `prestar_libro(libro_id, usuario)` y `devolver_libro(prestamo_id)` están en `catalogo/views.py` y se ejecutan dentro de `transaction.atomic()`. La web las expone en `/prestamo/<libro>/<usuario>/` y `/devolucion/<prestamo>/` mediante las vistas `prestar_libro_vista` y `devolver_libro_vista`.
+
+```python
+from catalogo.views import prestar_libro, devolver_libro, prestamos_activos
+```
+
+```text
+Disponible antes: True
+--- Préstamo correcto
+Préstamo 1: Libro Demo 1 | disponible: False
+Préstamos activos: ['Préstamo 1: Libro Demo 1']
+--- Préstamo rechazado (libro no disponible)
+ValueError: El libro no está disponible
+--- Un solo préstamo activo por libro (restricción de la base de datos)
+IntegrityError: UNIQUE constraint failed: catalogo_prestamo.libro_id
+--- Devolución correcta
+Devuelto | disponible: True | activos: 0
+--- Doble devolución rechazada
+ValueError: El préstamo ya fue devuelto
+--- Rollback con transaction.atomic()
+Dentro de atomic(), disponible = False
+RuntimeError: Error simulado
+Tras refresh_from_db(), disponible = True
+--- Precio negativo (CheckConstraint)
+IntegrityError: CHECK constraint failed: libro_precio_no_negativo
+```
+
+`select_for_update()` bloquea la fila en PostgreSQL (`SELECT ... FOR UPDATE`); SQLite lo ignora porque bloquea toda la base de datos al escribir.
+
+## 7. Panel de administración
+
+- `Libro`: columnas título, ISBN, editorial, precio y disponible; filtros por editorial, disponibilidad y género; búsqueda por título, ISBN y autor.
+- `Prestamo`: columnas libro, usuario, fechas; filtro por devolución.
+- Registrados también `Autor`, `Editorial` y `PerfilUsuario`.
+- Los tests (`IntegradoraTests.test_panel_de_administracion`) comprueban que listados, formularios de alta, búsqueda y filtros responden con 200.
+
+## 8. Configuración de `DATABASES`
+
+SQLite (por defecto):
 
 ```python
 DATABASES = {
@@ -145,9 +191,7 @@ DATABASES = {
 }
 ```
 
-### PostgreSQL (ejemplo)
-
-Requiere el controlador `psycopg` (`pip install "psycopg[binary]"`) y un servidor PostgreSQL con la base de datos ya creada. Las credenciales se leen de variables de entorno y **nunca** se escriben en el código ni se suben al repositorio.
+PostgreSQL (sin credenciales en el código; se leen del entorno):
 
 ```python
 import os
@@ -164,27 +208,23 @@ DATABASES = {
 }
 ```
 
-Después de cambiar de gestor hay que volver a ejecutar `python manage.py migrate`.
+Pasos para pasar a PostgreSQL: crear base de datos y usuario, `pip install psycopg[binary]`, definir las variables de entorno `DB_*`, sustituir `DATABASES` y ejecutar `python manage.py migrate`. La prueba contra PostgreSQL no se ha realizado.
 
-## Qué no se versiona
+## 9. Preguntas finales
 
-El entorno virtual (`.venv/`), la base de datos local (`db.sqlite3`), los archivos de entorno (`.env`) y los temporales (`*.old`, `*.bk`, `shell*.txt`) están en `.gitignore`.
+1. **ORM frente a SQL.** El ORM permite escribir consultas en Python, es independiente del motor y evita errores de SQL; el SQL directo da más control para consultas muy complejas.
+2. **Migraciones como código.** Son archivos versionados que describen los cambios del esquema, se aplican en el mismo orden en cualquier máquina y quedan en el historial de Git.
+3. **FK, M2M y O2O.** `ForeignKey`: muchos a uno (libro → editorial). `ManyToManyField`: muchos a muchos (libros ↔ autores). `OneToOneField`: uno a uno (usuario ↔ perfil).
+4. **Por qué el préstamo necesita transacción.** Crea el préstamo y marca el libro como no disponible: si falla uno de los dos pasos, no debe quedar el otro a medias.
+5. **Pasos para PostgreSQL.** Los del apartado 8.
 
-## Estructura
+## 10. Estructura
 
-```txt
-MiBiblioteca/
-├── biblioteca/            # configuración del proyecto
-├── catalogo/              # aplicación: modelos, vistas, plantillas, migraciones
-│   ├── prestamos.py       # prestar_libro y devolver_libro (Actividad 7)
-│   └── tests.py           # pruebas de préstamos, rollback y restricción de precio
-├── actividad4_crud.py
-├── actividad5_consultas.py
-├── actividad6_datos.py
-├── actividad6_consultas.py
-├── actividad6_on_delete.py
-├── cargar_libros.py
-├── Actividad2.md ... Actividad7.md
-├── manage.py
-└── requirements.txt
+```text
+biblioteca/        configuración del proyecto
+catalogo/          app: models.py, views.py, admin.py, tests.py, urls.py, migrations/
+cargar_libros.py   datos de ejemplo
+requirements.txt
 ```
+
+No se versionan: `.venv/`, `db.sqlite3`, `.env`, credenciales.
